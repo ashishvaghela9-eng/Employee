@@ -439,16 +439,17 @@ export default function Employees() {
               </div>
             </div>
 
-            {/* Workflow */}
-            <div className="col-span-2 mt-2"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Workflow</p><Separator /></div>
+            {/* Request Initiator */}
+            <div className="col-span-2 mt-2"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Request Initiator</p><Separator /></div>
 
             <div className="space-y-1.5"><Label>Requester</Label><Input value={formData.requester} onChange={e => setF("requester", e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Approver</Label><Input value={formData.approver} onChange={e => setF("approver", e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Creator</Label><Input value={formData.creator} onChange={e => setF("creator", e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Exit Initiator (HR / Team)</Label><Input value={formData.exitInitiator} onChange={e => setF("exitInitiator", e.target.value)} /></div>
 
             {/* Exit */}
             <div className="col-span-2 mt-2"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Exit Details</p><Separator /></div>
+
+            <div className="space-y-1.5"><Label>Exit Initiator (HR / Team)</Label><Input value={formData.exitInitiator} onChange={e => setF("exitInitiator", e.target.value)} /></div>
 
             <div className="space-y-1.5">
               <Label>User Exit Status</Label>
