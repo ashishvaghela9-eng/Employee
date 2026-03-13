@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Plus, Upload, Download, Edit, Eye, Trash2, Loader2, FileSpreadsheet } from "lucide-react";
+import { Search, Plus, Upload, Download, Edit, Eye, Trash2, Loader2, FileSpreadsheet, ShieldAlert } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import Papa from "papaparse";
 
