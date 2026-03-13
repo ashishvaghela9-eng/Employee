@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useListEmployees, useCreateEmployee, useUpdateEmployee, useDeleteEmployee, useUpdateEmployeeAccess, useImportEmployees } from "@workspace/api-client-react";
+import { useListEmployees, useCreateEmployee, useUpdateEmployee, useDeleteEmployee, useImportEmployees } from "@workspace/api-client-react";
 import type { Employee } from "@workspace/api-client-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -13,40 +13,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import {
   Search, Plus, Upload, Download, Edit, Trash2, Loader2,
-  FileSpreadsheet, ShieldAlert, AlertCircle, CheckCircle2, X, Eye, EyeOff
+  FileSpreadsheet, AlertCircle, CheckCircle2, X, Eye, EyeOff
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import * as XLSX from "xlsx";
+import { ACCESS_ITEMS } from "@/lib/access-items";
 
-// ── Access system definitions ─────────────────────────────────────────────────
-const ACCESS_ITEMS: { key: string; label: string }[] = [
-  { key: "zohoEmail",          label: "Zoho Email" },
-  { key: "microsoftEmail",     label: "Microsoft Email" },
-  { key: "microsoftOffice",    label: "Microsoft Office" },
-  { key: "finfluxBmDashboard", label: "Finflux BM Dashboard" },
-  { key: "mobiliteField",      label: "Mobilite Field" },
-  { key: "mobiliteCredit",     label: "Mobilite Credit" },
-  { key: "hoDashboard",        label: "HO Dashboard" },
-  { key: "lightMoney",         label: "Light Money" },
-  { key: "zohoProjects",       label: "Zoho Projects" },
-  { key: "jira",               label: "Jira" },
-  { key: "bitbucket",          label: "Bitbucket" },
-  { key: "adobeAcrobat",       label: "Adobe Acrobat" },
-  { key: "assetcuez",          label: "AssetCuez" },
-  { key: "exotel",             label: "Exotel" },
-  { key: "godaddy",            label: "GoDaddy" },
-  { key: "bluehost",           label: "Bluehost" },
-  { key: "hostinger",          label: "Hostinger" },
-  { key: "emailHosting",       label: "Email Hosting" },
-  { key: "awsConsole",         label: "AWS Console" },
-  { key: "msg91",              label: "MSG91" },
-  { key: "dmsAlfresco",        label: "DMS / Alfresco" },
-];
-
-// ── Template columns (for download) ──────────────────────────────────────────
+// ── Template / CSV map ────────────────────────────────────────────────────────
 const TEMPLATE_COLS = [
   "Employee Code", "Name", "Status", "Department", "Designation",
   "Contact Number", "State", "Branch", "Joining Date", "Email ID",
@@ -54,7 +31,6 @@ const TEMPLATE_COLS = [
   "Exit Initiator", "Exit Date", "User Exit Status",
 ];
 
-// ── CSV→field mapping ─────────────────────────────────────────────────────────
 const CSV_MAP: Record<string, string> = {
   "Employee Code":    "employeeCode",
   "Name":            "name",
@@ -82,7 +58,6 @@ const EMPTY_FORM = {
   exitInitiator: "", exitDate: "", userExitStatus: "No",
 };
 
-// ── Status badge helper ───────────────────────────────────────────────────────
 function StatusBadge({ status }: { status?: string }) {
   const cls =
     status === "Active"     ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
@@ -93,18 +68,13 @@ function StatusBadge({ status }: { status?: string }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Employees() {
-  const [search, setSearch] = useState("");
-
-  // modal states
+  const [search,       setSearch]       = useState("");
   const [isFormOpen,   setIsFormOpen]   = useState(false);
-  const [isAccessOpen, setIsAccessOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
-
-  const [editingId,   setEditingId]   = useState<number | null>(null);
-  const [selectedEmp, setSelectedEmp] = useState<Employee | null>(null);
-  const [formData,    setFormData]    = useState<typeof EMPTY_FORM>({ ...EMPTY_FORM });
-  const [accessData,  setAccessData]  = useState<Record<string, boolean>>({});
-  const [showPwd,     setShowPwd]     = useState(false);
+  const [editingId,    setEditingId]    = useState<number | null>(null);
+  const [formData,     setFormData]     = useState<typeof EMPTY_FORM>({ ...EMPTY_FORM });
+  const [accessData,   setAccessData]   = useState<Record<string, boolean>>({});
+  const [showPwd,      setShowPwd]      = useState(false);
 
   // import state
   const [importRows,      setImportRows]      = useState<any[]>([]);
@@ -112,22 +82,32 @@ export default function Employees() {
   const [columnMap,       setColumnMap]       = useState<Record<string, string>>({});
   const [updateDuplicate, setUpdateDuplicate] = useState(true);
   const [importProgress,  setImportProgress]  = useState(0);
-  const [importResult,    setImportResult]    = useState<{ imported: number; updated: number; failed: number; errors: { row: number; error: string }[] } | null>(null);
+  const [importResult,    setImportResult]    = useState<{
+    imported: number; updated: number; failed: number;
+    errors: { row: number; error: string }[];
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const queryClient   = useQueryClient();
-  const { toast }     = useToast();
+  const queryClient    = useQueryClient();
+  const { toast }      = useToast();
   const { data: employees, isLoading } = useListEmployees({ search: search || undefined });
 
   const createMutation = useCreateEmployee();
   const updateMutation = useUpdateEmployee();
   const deleteMutation = useDeleteEmployee();
-  const accessMutation = useUpdateEmployeeAccess();
   const importMutation = useImportEmployees();
 
   // ── form helpers ────────────────────────────────────────────────────────────
-  const setF = (k: keyof typeof EMPTY_FORM, v: string) =>
-    setFormData(p => ({ ...p, [k]: v }));
+  const setF = (k: keyof typeof EMPTY_FORM, v: string) => {
+    setFormData(p => {
+      const next = { ...p, [k]: v };
+      // when exit status flipped to Yes, clear all service access in UI too
+      if (k === "userExitStatus" && v === "Yes") {
+        setAccessData({});
+      }
+      return next;
+    });
+  };
 
   const handleOpenForm = (emp?: Employee) => {
     setShowPwd(false);
@@ -152,9 +132,11 @@ export default function Employees() {
         exitDate:       emp.exitDate       || "",
         userExitStatus: emp.userExitStatus || "No",
       });
+      setAccessData((emp.access as Record<string, boolean>) || {});
     } else {
       setEditingId(null);
       setFormData({ ...EMPTY_FORM });
+      setAccessData({});
     }
     setIsFormOpen(true);
   };
@@ -166,6 +148,9 @@ export default function Employees() {
     }
     const payload: any = { ...formData };
     if (!payload.password) delete payload.password;
+
+    // include access — if exit=Yes, server will auto-clear, but we also clear locally
+    payload.access = formData.userExitStatus === "Yes" ? {} : accessData;
 
     if (editingId) {
       updateMutation.mutate({ id: editingId, data: payload }, {
@@ -198,47 +183,22 @@ export default function Employees() {
     });
   };
 
-  // ── access checklist ────────────────────────────────────────────────────────
-  const handleOpenAccess = (emp: Employee) => {
-    setSelectedEmp(emp);
-    setAccessData((emp.access as Record<string, boolean>) || {});
-    setIsAccessOpen(true);
-  };
-
-  const handleSaveAccess = () => {
-    if (!selectedEmp) return;
-    accessMutation.mutate({ id: selectedEmp.id, data: { access: accessData } }, {
-      onSuccess: () => {
-        toast({ title: "Access Updated", description: "System access checklist saved." });
-        queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
-        setIsAccessOpen(false);
-      },
-    });
-  };
-
   // ── import helpers ──────────────────────────────────────────────────────────
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (evt) => {
       const data = new Uint8Array(evt.target!.result as ArrayBuffer);
-      const wb = XLSX.read(data, { type: "array" });
-      const ws = wb.Sheets[wb.SheetNames[0]];
+      const wb   = XLSX.read(data, { type: "array" });
+      const ws   = wb.Sheets[wb.SheetNames[0]];
       const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
       if (!rows.length) { toast({ title: "Empty file", variant: "destructive" }); return; }
-
       const headers = Object.keys(rows[0]);
       setImportHeaders(headers);
       setImportRows(rows);
-
-      // auto-map columns
       const autoMap: Record<string, string> = {};
-      headers.forEach(h => {
-        const match = CSV_MAP[h];
-        if (match) autoMap[h] = match;
-      });
+      headers.forEach(h => { if (CSV_MAP[h]) autoMap[h] = CSV_MAP[h]; });
       setColumnMap(autoMap);
       setImportResult(null);
       setImportProgress(0);
@@ -255,7 +215,6 @@ export default function Employees() {
       });
       return emp;
     });
-
     setImportProgress(30);
     importMutation.mutate({ data: { employees: payload, updateOnDuplicate: updateDuplicate } }, {
       onSuccess: (res) => {
@@ -287,19 +246,17 @@ export default function Employees() {
   };
 
   const resetImport = () => {
-    setImportRows([]);
-    setImportHeaders([]);
-    setColumnMap({});
-    setImportResult(null);
-    setImportProgress(0);
+    setImportRows([]); setImportHeaders([]); setColumnMap({});
+    setImportResult(null); setImportProgress(0);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // ── FIELD options ────────────────────────────────────────────────────────────
   const fieldOptions = [
     { value: "", label: "— Skip —" },
     ...Object.entries(CSV_MAP).map(([, v]) => ({ value: v, label: v.replace(/([A-Z])/g, ' $1').trim() })),
   ];
+
+  const enabledCount = Object.values(accessData).filter(Boolean).length;
 
   // ── render ───────────────────────────────────────────────────────────────────
   return (
@@ -377,9 +334,6 @@ export default function Employees() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 bg-blue-50 hover:bg-blue-100" title="Manage Access" onClick={() => handleOpenAccess(emp)}>
-                        <ShieldAlert className="w-4 h-4" />
-                      </Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-600 bg-amber-50 hover:bg-amber-100" title="Edit" onClick={() => handleOpenForm(emp)}>
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -397,79 +351,149 @@ export default function Employees() {
 
       {/* ── Add / Edit Dialog ──────────────────────────────────────────────── */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId ? "Edit Employee" : "Add Employee"}</DialogTitle>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
-            {/* Basic Info */}
-            <div className="col-span-2"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Basic Information</p><Separator /></div>
+          <Tabs defaultValue="basic" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="basic">Basic Information</TabsTrigger>
+              <TabsTrigger value="services">
+                Services
+                {enabledCount > 0 && (
+                  <span className="ml-2 bg-primary text-primary-foreground text-xs rounded-full px-1.5 py-0.5 leading-none">
+                    {enabledCount}
+                  </span>
+                )}
+              </TabsTrigger>
+            </TabsList>
 
-            <div className="space-y-1.5"><Label>Employee Code *</Label><Input value={formData.employeeCode} onChange={e => setF("employeeCode", e.target.value)} placeholder="e.g. LF001" /></div>
-            <div className="space-y-1.5"><Label>Name *</Label><Input value={formData.name} onChange={e => setF("name", e.target.value)} placeholder="Full name" /></div>
+            {/* ── Basic Information Tab ── */}
+            <TabsContent value="basic">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-            <div className="space-y-1.5">
-              <Label>Status *</Label>
-              <Select value={formData.status} onValueChange={v => setF("status", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="Inactive">Inactive</SelectItem>
-                  <SelectItem value="In Service">In Service</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                <div className="col-span-2"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Basic Information</p><Separator /></div>
 
-            <div className="space-y-1.5"><Label>Department</Label><Input value={formData.department} onChange={e => setF("department", e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Designation</Label><Input value={formData.designation} onChange={e => setF("designation", e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Branch</Label><Input value={formData.branch} onChange={e => setF("branch", e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>State</Label><Input value={formData.state} onChange={e => setF("state", e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Contact Number</Label><Input value={formData.contactNumber} onChange={e => setF("contactNumber", e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Joining Date</Label><Input type="date" value={formData.joiningDate} onChange={e => setF("joiningDate", e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Email ID</Label><Input type="email" value={formData.email} onChange={e => setF("email", e.target.value)} /></div>
+                <div className="space-y-1.5"><Label>Employee Code *</Label><Input value={formData.employeeCode} onChange={e => setF("employeeCode", e.target.value)} placeholder="e.g. LF001" /></div>
+                <div className="space-y-1.5"><Label>Name *</Label><Input value={formData.name} onChange={e => setF("name", e.target.value)} placeholder="Full name" /></div>
 
-            <div className="space-y-1.5">
-              <Label>Password {editingId ? "(leave blank to keep)" : ""}</Label>
-              <div className="relative">
-                <Input type={showPwd ? "text" : "password"} value={formData.password} onChange={e => setF("password", e.target.value)} placeholder={editingId ? "••••••••" : "Set password"} />
-                <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={() => setShowPwd(p => !p)}>
-                  {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                <div className="space-y-1.5">
+                  <Label>Status *</Label>
+                  <Select value={formData.status} onValueChange={v => setF("status", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Inactive">Inactive</SelectItem>
+                      <SelectItem value="In Service">In Service</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5"><Label>Department</Label><Input value={formData.department} onChange={e => setF("department", e.target.value)} /></div>
+                <div className="space-y-1.5"><Label>Designation</Label><Input value={formData.designation} onChange={e => setF("designation", e.target.value)} /></div>
+                <div className="space-y-1.5"><Label>Branch</Label><Input value={formData.branch} onChange={e => setF("branch", e.target.value)} /></div>
+                <div className="space-y-1.5"><Label>State</Label><Input value={formData.state} onChange={e => setF("state", e.target.value)} /></div>
+                <div className="space-y-1.5"><Label>Contact Number</Label><Input value={formData.contactNumber} onChange={e => setF("contactNumber", e.target.value)} /></div>
+                <div className="space-y-1.5"><Label>Joining Date</Label><Input type="date" value={formData.joiningDate} onChange={e => setF("joiningDate", e.target.value)} /></div>
+                <div className="space-y-1.5"><Label>Email ID</Label><Input type="email" value={formData.email} onChange={e => setF("email", e.target.value)} /></div>
+
+                <div className="space-y-1.5">
+                  <Label>Password {editingId ? "(leave blank to keep)" : ""}</Label>
+                  <div className="relative">
+                    <Input type={showPwd ? "text" : "password"} value={formData.password} onChange={e => setF("password", e.target.value)} placeholder={editingId ? "••••••••" : "Set password"} />
+                    <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={() => setShowPwd(p => !p)}>
+                      {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="col-span-2 mt-2"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Request Initiator</p><Separator /></div>
+
+                <div className="space-y-1.5"><Label>Requester</Label><Input value={formData.requester} onChange={e => setF("requester", e.target.value)} /></div>
+                <div className="space-y-1.5"><Label>Approver</Label><Input value={formData.approver} onChange={e => setF("approver", e.target.value)} /></div>
+                <div className="space-y-1.5"><Label>Creator</Label><Input value={formData.creator} onChange={e => setF("creator", e.target.value)} /></div>
+
+                <div className="col-span-2 mt-2"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Exit Details</p><Separator /></div>
+
+                <div className="space-y-1.5"><Label>Exit Initiator (HR / Team)</Label><Input value={formData.exitInitiator} onChange={e => setF("exitInitiator", e.target.value)} /></div>
+
+                <div className="space-y-1.5">
+                  <Label>User Exit Status</Label>
+                  <Select value={formData.userExitStatus} onValueChange={v => setF("userExitStatus", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="No">No</SelectItem>
+                      <SelectItem value="Yes">Yes (will mark Inactive)</SelectItem>
+                      <SelectItem value="In Service">In Service</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {formData.userExitStatus === "Yes" && (
+                    <p className="text-xs text-rose-600 mt-1">⚠ Employee will be marked Inactive and all service access will be removed.</p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5"><Label>Exit Date</Label><Input type="date" value={formData.exitDate} onChange={e => setF("exitDate", e.target.value)} /></div>
               </div>
-            </div>
+            </TabsContent>
 
-            {/* Request Initiator */}
-            <div className="col-span-2 mt-2"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Request Initiator</p><Separator /></div>
+            {/* ── Services Tab ── */}
+            <TabsContent value="services">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">System Access / Services</p>
+                    <p className="text-xs text-muted-foreground">Select the services this employee has access to.</p>
+                  </div>
+                  <Badge variant="outline" className="text-primary border-primary/30">
+                    {enabledCount} / {ACCESS_ITEMS.length} enabled
+                  </Badge>
+                </div>
 
-            <div className="space-y-1.5"><Label>Requester</Label><Input value={formData.requester} onChange={e => setF("requester", e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Approver</Label><Input value={formData.approver} onChange={e => setF("approver", e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Creator</Label><Input value={formData.creator} onChange={e => setF("creator", e.target.value)} /></div>
+                {formData.userExitStatus === "Yes" && (
+                  <div className="flex items-center gap-2 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    Exit status is "Yes" — all services will be cleared on save.
+                  </div>
+                )}
 
-            {/* Exit */}
-            <div className="col-span-2 mt-2"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Exit Details</p><Separator /></div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {ACCESS_ITEMS.map(({ key, label }) => {
+                    const checked = !!accessData[key];
+                    const disabled = formData.userExitStatus === "Yes";
+                    return (
+                      <label
+                        key={key}
+                        className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors
+                          ${disabled ? "opacity-40 cursor-not-allowed" :
+                            checked  ? "bg-primary/5 border-primary/30 hover:bg-primary/10" :
+                                       "bg-muted/20 border-border hover:bg-muted/40"}`}
+                      >
+                        <Checkbox
+                          id={key}
+                          checked={checked}
+                          disabled={disabled}
+                          onCheckedChange={c => setAccessData(p => ({ ...p, [key]: !!c }))}
+                        />
+                        <span className="text-sm font-medium leading-tight">{label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
 
-            <div className="space-y-1.5"><Label>Exit Initiator (HR / Team)</Label><Input value={formData.exitInitiator} onChange={e => setF("exitInitiator", e.target.value)} /></div>
+                <div className="flex gap-2 pt-2">
+                  <Button variant="outline" size="sm" onClick={() => {
+                    const all: Record<string, boolean> = {};
+                    ACCESS_ITEMS.forEach(i => { all[i.key] = true; });
+                    setAccessData(all);
+                  }} disabled={formData.userExitStatus === "Yes"}>Select All</Button>
+                  <Button variant="outline" size="sm" onClick={() => setAccessData({})} disabled={formData.userExitStatus === "Yes"}>Clear All</Button>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
 
-            <div className="space-y-1.5">
-              <Label>User Exit Status</Label>
-              <Select value={formData.userExitStatus} onValueChange={v => setF("userExitStatus", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="No">No</SelectItem>
-                  <SelectItem value="Yes">Yes (will mark Inactive)</SelectItem>
-                  <SelectItem value="In Service">In Service</SelectItem>
-                </SelectContent>
-              </Select>
-              {formData.userExitStatus === "Yes" && (
-                <p className="text-xs text-rose-600 mt-1">⚠ Employee will be marked Inactive and access will be disabled.</p>
-              )}
-            </div>
-
-            <div className="space-y-1.5"><Label>Exit Date</Label><Input type="date" value={formData.exitDate} onChange={e => setF("exitDate", e.target.value)} /></div>
-          </div>
-
-          <DialogFooter>
+          <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setIsFormOpen(false)}>Cancel</Button>
             <Button onClick={handleSave} disabled={createMutation.isPending || updateMutation.isPending}>
               {(createMutation.isPending || updateMutation.isPending) ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</> : "Save Employee"}
@@ -478,52 +502,15 @@ export default function Employees() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Access Checklist Dialog ────────────────────────────────────────── */}
-      <Dialog open={isAccessOpen} onOpenChange={setIsAccessOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>System Access — {selectedEmp?.name}</DialogTitle>
-            <p className="text-sm text-muted-foreground">Check the systems this employee has access to.</p>
-          </DialogHeader>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 py-4">
-            {ACCESS_ITEMS.map(({ key, label }) => (
-              <label key={key} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${accessData[key] ? "bg-primary/5 border-primary/30" : "bg-muted/20 border-border hover:bg-muted/40"}`}>
-                <Checkbox
-                  id={key}
-                  checked={!!accessData[key]}
-                  onCheckedChange={c => setAccessData(p => ({ ...p, [key]: !!c }))}
-                />
-                <span className="text-sm font-medium leading-tight">{label}</span>
-              </label>
-            ))}
-          </div>
-
-          <div className="flex items-center justify-between pt-2">
-            <p className="text-sm text-muted-foreground">
-              {Object.values(accessData).filter(Boolean).length} / {ACCESS_ITEMS.length} systems enabled
-            </p>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setIsAccessOpen(false)}>Close</Button>
-              <Button onClick={handleSaveAccess} disabled={accessMutation.isPending}>
-                {accessMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</> : "Save Access"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       {/* ── Import Dialog ──────────────────────────────────────────────────── */}
       <Dialog open={isImportOpen} onOpenChange={v => { if (!v) resetImport(); setIsImportOpen(v); }}>
         <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Import Employees</DialogTitle>
-            <p className="text-sm text-muted-foreground">Upload a CSV or Excel (.xlsx) file. Map columns, then start import.</p>
+            <p className="text-sm text-muted-foreground">Upload CSV or Excel (.xlsx). Map columns, then start import.</p>
           </DialogHeader>
 
           <div className="space-y-5 py-2">
-
-            {/* File upload zone */}
             <div
               className="border-2 border-dashed border-border rounded-xl p-8 text-center bg-muted/20 cursor-pointer hover:bg-muted/30 transition-colors"
               onClick={() => fileInputRef.current?.click()}
@@ -531,17 +518,13 @@ export default function Employees() {
               <FileSpreadsheet className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
               <p className="font-medium text-sm">Click to upload CSV or Excel file</p>
               <p className="text-xs text-muted-foreground mt-1">.csv, .xlsx, .xls supported</p>
-              {importRows.length > 0 && (
-                <Badge className="mt-3 bg-primary/10 text-primary border-primary/20">{importRows.length} rows loaded</Badge>
-              )}
+              {importRows.length > 0 && <Badge className="mt-3 bg-primary/10 text-primary border-primary/20">{importRows.length} rows loaded</Badge>}
               <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleFileChange} />
             </div>
 
-            {/* Column mapping */}
             {importHeaders.length > 0 && !importResult && (
               <div className="space-y-3">
                 <p className="text-sm font-semibold">Column Mapping</p>
-                <p className="text-xs text-muted-foreground">Map each column from your file to the correct employee field.</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-64 overflow-y-auto pr-1">
                   {importHeaders.map(h => (
                     <div key={h} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 border">
@@ -556,19 +539,16 @@ export default function Employees() {
                     </div>
                   ))}
                 </div>
-
-                {/* Update on duplicate */}
                 <div className="flex items-center gap-3 p-3 rounded-xl border bg-muted/20">
                   <Switch checked={updateDuplicate} onCheckedChange={setUpdateDuplicate} id="update-dup" />
                   <label htmlFor="update-dup" className="text-sm cursor-pointer">
                     <span className="font-medium">Update on duplicate Employee Code</span>
-                    <p className="text-xs text-muted-foreground">If an employee code already exists, update that record instead of skipping.</p>
+                    <p className="text-xs text-muted-foreground">Update existing record if employee code already exists.</p>
                   </label>
                 </div>
               </div>
             )}
 
-            {/* Progress */}
             {importMutation.isPending && (
               <div className="space-y-2">
                 <Progress value={importProgress} className="h-2" />
@@ -576,7 +556,6 @@ export default function Employees() {
               </div>
             )}
 
-            {/* Result */}
             {importResult && (
               <div className="rounded-xl border bg-muted/10 p-4 space-y-3">
                 <div className="flex items-center gap-2">
@@ -606,9 +585,7 @@ export default function Employees() {
           </div>
 
           <DialogFooter className="gap-2">
-            <Button variant="ghost" size="sm" onClick={resetImport} disabled={!importRows.length || importMutation.isPending}>
-              <X className="w-4 h-4 mr-1" /> Clear
-            </Button>
+            <Button variant="ghost" size="sm" onClick={resetImport} disabled={!importRows.length || importMutation.isPending}><X className="w-4 h-4 mr-1" /> Clear</Button>
             <Button variant="outline" onClick={() => { resetImport(); setIsImportOpen(false); }}>Close</Button>
             {!importResult && (
               <Button onClick={handleStartImport} disabled={!importRows.length || importMutation.isPending}>
