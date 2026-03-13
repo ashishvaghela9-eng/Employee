@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Employee Master"
+version = "1.0.0"
+id = "artifacts/employee-master"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+localPort = 18096
+name = "web"
+paths = ["/"]
+
+[services.development]
+run = "pnpm --filter @workspace/employee-master run dev"
+
+[services.env]
+PORT = "18096"
+BASE_PATH = "/"
+
+[services.production]
+build = ["pnpm", "--filter", "@workspace/employee-master", "run", "build"]
+publicDir = "artifacts/employee-master/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"

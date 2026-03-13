@@ -1,0 +1,22 @@
+packages:
+  "recharts": "Dashboard analytics charts and data visualization"
+  "framer-motion": "Smooth page transitions and micro-interactions"
+  "papaparse": "Parsing CSV files for the import feature"
+  "@types/papaparse": "TypeScript definitions for papaparse"
+  "xlsx": "Parsing Excel files for the import feature"
+  "date-fns": "Human-readable date formatting"
+  "@hookform/resolvers": "Zod validation for react-hook-form"
+  "react-hook-form": "Form state management"
+  "zod": "Schema validation"
+  "clsx": "Class name merging"
+  "tailwind-merge": "Tailwind utility merging"
+
+images:
+  - path: "artifacts/employee-master/public/images/login-bg.png"
+    description: "Abstract modern minimal geometric background in deep navy blue and subtle bright blue accents, professional corporate feel, soft gradients"
+    aspect_ratio: "16:9"
+
+notes:
+  - JWT auth is handled via localStorage 'auth_token'. A global fetch interceptor in App.tsx injects the Bearer token into all requests.
+  - Using generated Orval hooks from @workspace/api-client-react.
+  - Sidebar is styled with dark theme colors explicitly.

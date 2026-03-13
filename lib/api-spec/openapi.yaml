@@ -1,22 +1,44 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Employee Master API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: employees
+    description: Employee management
+  - name: branch-file-station
+    description: Branch File Station module
+  - name: assetcuez
+    description: AssetCuez module
+  - name: vpn
+    description: VPN module
+  - name: jira
+    description: Jira module
+  - name: mailvault
+    description: MailVault module
+  - name: ftp
+    description: FTP module
+  - name: acronis
+    description: Acronis Backup module
+  - name: tata-tele
+    description: Tata Tele module
+  - name: system-users
+    description: System Users module
+  - name: reports
+    description: Reports module
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +46,901 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemUser"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /employees:
+    get:
+      operationId: listEmployees
+      tags: [employees]
+      summary: List all employees
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: department
+          in: query
+          schema:
+            type: string
+        - name: branch
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of employees
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Employee"
+    post:
+      operationId: createEmployee
+      tags: [employees]
+      summary: Create employee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEmployeeRequest"
+      responses:
+        "201":
+          description: Employee created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+
+  /employees/import:
+    post:
+      operationId: importEmployees
+      tags: [employees]
+      summary: Import employees from CSV/XLSX
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportEmployeesRequest"
+      responses:
+        "200":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResult"
+
+  /employees/{id}:
+    get:
+      operationId: getEmployee
+      tags: [employees]
+      summary: Get employee by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateEmployee
+      tags: [employees]
+      summary: Update employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateEmployeeRequest"
+      responses:
+        "200":
+          description: Updated employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+    delete:
+      operationId: deleteEmployee
+      tags: [employees]
+      summary: Delete employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /employees/{id}/access:
+    put:
+      operationId: updateEmployeeAccess
+      tags: [employees]
+      summary: Update employee system access checklist
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAccessRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [reports]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /branch-file-station:
+    get:
+      operationId: listBranchFileStation
+      tags: [branch-file-station]
+      summary: List branch file station records
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BranchFileStation"
+    post:
+      operationId: createBranchFileStation
+      tags: [branch-file-station]
+      summary: Create record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBranchFileStationRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BranchFileStation"
+
+  /branch-file-station/{id}:
+    put:
+      operationId: updateBranchFileStation
+      tags: [branch-file-station]
+      summary: Update record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBranchFileStationRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BranchFileStation"
+    delete:
+      operationId: deleteBranchFileStation
+      tags: [branch-file-station]
+      summary: Delete record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /assetcuez:
+    get:
+      operationId: listAssetcuez
+      tags: [assetcuez]
+      summary: List AssetCuez records
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AssetCuez"
+    post:
+      operationId: createAssetcuez
+      tags: [assetcuez]
+      summary: Create record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAssetCuezRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetCuez"
+
+  /assetcuez/{id}:
+    put:
+      operationId: updateAssetcuez
+      tags: [assetcuez]
+      summary: Update record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAssetCuezRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetCuez"
+    delete:
+      operationId: deleteAssetcuez
+      tags: [assetcuez]
+      summary: Delete record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /vpn:
+    get:
+      operationId: listVpn
+      tags: [vpn]
+      summary: List VPN records
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VpnUser"
+    post:
+      operationId: createVpn
+      tags: [vpn]
+      summary: Create VPN record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateVpnRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VpnUser"
+
+  /vpn/{id}:
+    put:
+      operationId: updateVpn
+      tags: [vpn]
+      summary: Update VPN record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateVpnRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VpnUser"
+    delete:
+      operationId: deleteVpn
+      tags: [vpn]
+      summary: Delete VPN record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /jira:
+    get:
+      operationId: listJira
+      tags: [jira]
+      summary: List Jira records
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/JiraUser"
+    post:
+      operationId: createJira
+      tags: [jira]
+      summary: Create Jira record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateJiraRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JiraUser"
+
+  /jira/{id}:
+    put:
+      operationId: updateJira
+      tags: [jira]
+      summary: Update Jira record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateJiraRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JiraUser"
+    delete:
+      operationId: deleteJira
+      tags: [jira]
+      summary: Delete Jira record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /mailvault:
+    get:
+      operationId: listMailvault
+      tags: [mailvault]
+      summary: List MailVault records
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MailVaultUser"
+    post:
+      operationId: createMailvault
+      tags: [mailvault]
+      summary: Create MailVault record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMailVaultRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MailVaultUser"
+
+  /mailvault/{id}:
+    put:
+      operationId: updateMailvault
+      tags: [mailvault]
+      summary: Update MailVault record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMailVaultRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MailVaultUser"
+    delete:
+      operationId: deleteMailvault
+      tags: [mailvault]
+      summary: Delete MailVault record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /ftp:
+    get:
+      operationId: listFtp
+      tags: [ftp]
+      summary: List FTP records
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FtpUser"
+    post:
+      operationId: createFtp
+      tags: [ftp]
+      summary: Create FTP record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFtpRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FtpUser"
+
+  /ftp/{id}:
+    put:
+      operationId: updateFtp
+      tags: [ftp]
+      summary: Update FTP record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFtpRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FtpUser"
+    delete:
+      operationId: deleteFtp
+      tags: [ftp]
+      summary: Delete FTP record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /acronis:
+    get:
+      operationId: listAcronis
+      tags: [acronis]
+      summary: List Acronis Backup records
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AcronisRecord"
+    post:
+      operationId: createAcronis
+      tags: [acronis]
+      summary: Create Acronis record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAcronisRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcronisRecord"
+
+  /acronis/{id}:
+    put:
+      operationId: updateAcronis
+      tags: [acronis]
+      summary: Update Acronis record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAcronisRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcronisRecord"
+    delete:
+      operationId: deleteAcronis
+      tags: [acronis]
+      summary: Delete Acronis record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /tata-tele:
+    get:
+      operationId: listTataTele
+      tags: [tata-tele]
+      summary: List Tata Tele records
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TataTeleRecord"
+    post:
+      operationId: createTataTele
+      tags: [tata-tele]
+      summary: Create Tata Tele record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTataTeleRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TataTeleRecord"
+
+  /tata-tele/{id}:
+    put:
+      operationId: updateTataTele
+      tags: [tata-tele]
+      summary: Update Tata Tele record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTataTeleRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TataTeleRecord"
+    delete:
+      operationId: deleteTataTele
+      tags: [tata-tele]
+      summary: Delete Tata Tele record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /system-users:
+    get:
+      operationId: listSystemUsers
+      tags: [system-users]
+      summary: List system users
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SystemUser"
+    post:
+      operationId: createSystemUser
+      tags: [system-users]
+      summary: Create system user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSystemUserRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemUser"
+
+  /system-users/{id}:
+    put:
+      operationId: updateSystemUser
+      tags: [system-users]
+      summary: Update system user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSystemUserRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemUser"
+    delete:
+      operationId: deleteSystemUser
+      tags: [system-users]
+      summary: Delete system user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +951,738 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/SystemUser"
+      required:
+        - token
+        - user
+
+    SystemUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - email
+        - role
+        - createdAt
+
+    CreateSystemUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+      required:
+        - name
+        - email
+        - password
+        - role
+
+    UpdateSystemUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+
+    EmployeeAccess:
+      type: object
+      properties:
+        zohoEmail:
+          type: boolean
+        microsoftEmail:
+          type: boolean
+        microsoftOffice:
+          type: boolean
+        finfluxBmDashboard:
+          type: boolean
+        mobiliteField:
+          type: boolean
+        mobiliteCredit:
+          type: boolean
+        hoDashboard:
+          type: boolean
+        lightMoney:
+          type: boolean
+        zohoProjects:
+          type: boolean
+        jira:
+          type: boolean
+        bitbucket:
+          type: boolean
+        adobeAcrobat:
+          type: boolean
+        assetcuez:
+          type: boolean
+        exotel:
+          type: boolean
+        godaddy:
+          type: boolean
+        bluehost:
+          type: boolean
+        hostinger:
+          type: boolean
+        emailHosting:
+          type: boolean
+        awsConsole:
+          type: boolean
+        msg91:
+          type: boolean
+        dmsAlfresco:
+          type: boolean
+
+    Employee:
+      type: object
+      properties:
+        id:
+          type: integer
+        serialNumber:
+          type: integer
+        employeeCode:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+        department:
+          type: string
+        designation:
+          type: string
+        contactNumber:
+          type: string
+        state:
+          type: string
+        branch:
+          type: string
+        joiningDate:
+          type: string
+        email:
+          type: string
+        requester:
+          type: string
+        approver:
+          type: string
+        creator:
+          type: string
+        exitInitiator:
+          type: string
+        exitDate:
+          type: string
+        userExitStatus:
+          type: string
+        access:
+          $ref: "#/components/schemas/EmployeeAccess"
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - employeeCode
+        - name
+        - status
+        - createdAt
+        - updatedAt
+
+    CreateEmployeeRequest:
+      type: object
+      properties:
+        employeeCode:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+        department:
+          type: string
+        designation:
+          type: string
+        contactNumber:
+          type: string
+        state:
+          type: string
+        branch:
+          type: string
+        joiningDate:
+          type: string
+        email:
+          type: string
+        requester:
+          type: string
+        approver:
+          type: string
+        creator:
+          type: string
+        exitInitiator:
+          type: string
+        exitDate:
+          type: string
+        userExitStatus:
+          type: string
+      required:
+        - employeeCode
+        - name
+        - status
+
+    UpdateEmployeeRequest:
+      type: object
+      properties:
+        employeeCode:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+        department:
+          type: string
+        designation:
+          type: string
+        contactNumber:
+          type: string
+        state:
+          type: string
+        branch:
+          type: string
+        joiningDate:
+          type: string
+        email:
+          type: string
+        requester:
+          type: string
+        approver:
+          type: string
+        creator:
+          type: string
+        exitInitiator:
+          type: string
+        exitDate:
+          type: string
+        userExitStatus:
+          type: string
+
+    UpdateAccessRequest:
+      type: object
+      properties:
+        access:
+          $ref: "#/components/schemas/EmployeeAccess"
+      required:
+        - access
+
+    ImportEmployeesRequest:
+      type: object
+      properties:
+        employees:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateEmployeeRequest"
+        updateOnDuplicate:
+          type: boolean
+      required:
+        - employees
+
+    ImportResult:
+      type: object
+      properties:
+        imported:
+          type: integer
+        updated:
+          type: integer
+        failed:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              row:
+                type: integer
+              error:
+                type: string
+      required:
+        - imported
+        - updated
+        - failed
+        - errors
+
+    DashboardStats:
+      type: object
+      properties:
+        totalEmployees:
+          type: integer
+        activeEmployees:
+          type: integer
+        exitedEmployees:
+          type: integer
+        pendingExitRequests:
+          type: integer
+        accessSystemUsers:
+          type: integer
+        byDepartment:
+          type: array
+          items:
+            type: object
+            properties:
+              department:
+                type: string
+              count:
+                type: integer
+        byBranch:
+          type: array
+          items:
+            type: object
+            properties:
+              branch:
+                type: string
+              count:
+                type: integer
+        accessDistribution:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              count:
+                type: integer
+      required:
+        - totalEmployees
+        - activeEmployees
+        - exitedEmployees
+        - pendingExitRequests
+        - accessSystemUsers
+        - byDepartment
+        - byBranch
+        - accessDistribution
+
+    BranchFileStation:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        password:
+          type: string
+        groupEmail:
+          type: string
+        branchName:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - username
+        - branchName
+        - createdAt
+
+    CreateBranchFileStationRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        groupEmail:
+          type: string
+        branchName:
+          type: string
+      required:
+        - username
+        - branchName
+
+    AssetCuez:
+      type: object
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        contactNumber:
+          type: string
+        activationStatus:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - employeeId
+        - firstName
+        - createdAt
+
+    CreateAssetCuezRequest:
+      type: object
+      properties:
+        employeeId:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        contactNumber:
+          type: string
+        activationStatus:
+          type: string
+      required:
+        - employeeId
+        - firstName
+
+    VpnUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: string
+        username:
+          type: string
+        department:
+          type: string
+        designation:
+          type: string
+        userId:
+          type: string
+        password:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - employeeId
+        - username
+        - createdAt
+
+    CreateVpnRequest:
+      type: object
+      properties:
+        employeeId:
+          type: string
+        username:
+          type: string
+        department:
+          type: string
+        designation:
+          type: string
+        userId:
+          type: string
+        password:
+          type: string
+        status:
+          type: string
+      required:
+        - employeeId
+        - username
+
+    JiraUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+        userStatus:
+          type: string
+        addedToOrganization:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - employeeId
+        - username
+        - createdAt
+
+    CreateJiraRequest:
+      type: object
+      properties:
+        employeeId:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+        userStatus:
+          type: string
+        addedToOrganization:
+          type: string
+      required:
+        - employeeId
+        - username
+
+    MailVaultUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: string
+        username:
+          type: string
+        userId:
+          type: string
+        userRole:
+          type: string
+        password:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - employeeId
+        - username
+        - createdAt
+
+    CreateMailVaultRequest:
+      type: object
+      properties:
+        employeeId:
+          type: string
+        username:
+          type: string
+        userId:
+          type: string
+        userRole:
+          type: string
+        password:
+          type: string
+      required:
+        - employeeId
+        - username
+
+    FtpUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        password:
+          type: string
+        port:
+          type: string
+        hostname:
+          type: string
+        path:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - username
+        - createdAt
+
+    CreateFtpRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        port:
+          type: string
+        hostname:
+          type: string
+        path:
+          type: string
+      required:
+        - username
+
+    AcronisRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: string
+        employeeName:
+          type: string
+        department:
+          type: string
+        designation:
+          type: string
+        email:
+          type: string
+        hostname:
+          type: string
+        backupPlan:
+          type: string
+        monthlyFullBackupDate:
+          type: string
+        backupPlanName:
+          type: string
+        backupTime:
+          type: string
+        incrementalBackup:
+          type: string
+        cpuPriority:
+          type: string
+        installationStatus:
+          type: string
+        policyAssign:
+          type: string
+        backupStatus:
+          type: string
+        leftEncryptionPassword:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - employeeId
+        - employeeName
+        - createdAt
+
+    CreateAcronisRequest:
+      type: object
+      properties:
+        employeeId:
+          type: string
+        employeeName:
+          type: string
+        department:
+          type: string
+        designation:
+          type: string
+        email:
+          type: string
+        hostname:
+          type: string
+        backupPlan:
+          type: string
+        monthlyFullBackupDate:
+          type: string
+        backupPlanName:
+          type: string
+        backupTime:
+          type: string
+        incrementalBackup:
+          type: string
+        cpuPriority:
+          type: string
+        installationStatus:
+          type: string
+        policyAssign:
+          type: string
+        backupStatus:
+          type: string
+        leftEncryptionPassword:
+          type: string
+      required:
+        - employeeId
+        - employeeName
+
+    TataTeleRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: string
+        employeeName:
+          type: string
+        department:
+          type: string
+        designation:
+          type: string
+        mobileNumber:
+          type: string
+        simNumber:
+          type: string
+        plan:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - employeeId
+        - employeeName
+        - createdAt
+
+    CreateTataTeleRequest:
+      type: object
+      properties:
+        employeeId:
+          type: string
+        employeeName:
+          type: string
+        department:
+          type: string
+        designation:
+          type: string
+        mobileNumber:
+          type: string
+        simNumber:
+          type: string
+        plan:
+          type: string
+        status:
+          type: string
+      required:
+        - employeeId
+        - employeeName
