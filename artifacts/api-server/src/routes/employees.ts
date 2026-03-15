@@ -1,13 +1,21 @@
 import { Router, type IRouter } from "express";
-import { db, employeesTable } from "@workspace/db";
-import { eq, ilike, and, or, sql } from "drizzle-orm";
+import {
+  db,
+  employeesTable,
+  assetCuezTable,
+  jiraTable,
+  vpnTable,
+  mailvaultTable,
+  acronisTable,
+  tataTeleTable,
+} from "@workspace/db";
+import { eq, ilike, and, or } from "drizzle-orm";
 
 const router: IRouter = Router();
 
 router.get("/", async (req, res) => {
   try {
     const { status, department, branch, search } = req.query as Record<string, string>;
-    let query = db.select().from(employeesTable);
     const conditions: any[] = [];
     if (status) conditions.push(eq(employeesTable.status, status));
     if (department) conditions.push(eq(employeesTable.department, department));
@@ -72,10 +80,11 @@ router.post("/import", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const data = req.body;
-    if (!data.employeeCode || !data.name) {
+    if (!data || !data.employeeCode || !data.name) {
       return res.status(400).json({ error: "Employee code and name are required" });
     }
     const [emp] = await db.insert(employeesTable).values({ ...data, access: data.access || {} }).returning();
+    await syncModuleRecords(emp, data.access || {});
     return res.status(201).json(formatEmployee(emp));
   } catch (err: any) {
     if (err.code === "23505") {
@@ -101,16 +110,16 @@ router.put("/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const data = req.body;
-    
-    // If exit status becomes 'Yes', mark as inactive and disable access
+
     const updateData: any = { ...data, updatedAt: new Date() };
     if (data.userExitStatus === "Yes") {
       updateData.status = "Inactive";
       updateData.access = {};
     }
-    
+
     const [emp] = await db.update(employeesTable).set(updateData).where(eq(employeesTable.id, id)).returning();
     if (!emp) return res.status(404).json({ error: "Employee not found" });
+    await syncModuleRecords(emp, updateData.access || {});
     return res.json(formatEmployee(emp));
   } catch (err) {
     console.error(err);
@@ -134,12 +143,93 @@ router.put("/:id/access", async (req, res) => {
     const { access } = req.body;
     const [emp] = await db.update(employeesTable).set({ access, updatedAt: new Date() }).where(eq(employeesTable.id, id)).returning();
     if (!emp) return res.status(404).json({ error: "Employee not found" });
+    await syncModuleRecords(emp, access || {});
     return res.json(formatEmployee(emp));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+
+async function syncModuleRecords(emp: any, access: Record<string, boolean>) {
+  const code = emp.employeeCode;
+  const nameParts = (emp.name || "").split(" ");
+  const firstName = nameParts[0] || emp.name;
+  const lastName = nameParts.slice(1).join(" ") || null;
+
+  if (access.assetcuez) {
+    const existing = await db.select().from(assetCuezTable).where(eq(assetCuezTable.employeeId, code));
+    if (!existing.length) {
+      await db.insert(assetCuezTable).values({
+        employeeId: code,
+        firstName,
+        lastName,
+        contactNumber: emp.contactNumber || null,
+        activationStatus: "Active",
+      });
+    }
+  }
+
+  if (access.jira) {
+    const existing = await db.select().from(jiraTable).where(eq(jiraTable.employeeId, code));
+    if (!existing.length) {
+      await db.insert(jiraTable).values({
+        employeeId: code,
+        username: emp.name,
+        email: emp.email || null,
+        userStatus: "Active",
+      });
+    }
+  }
+
+  if (access.vpn) {
+    const existing = await db.select().from(vpnTable).where(eq(vpnTable.employeeId, code));
+    if (!existing.length) {
+      await db.insert(vpnTable).values({
+        employeeId: code,
+        username: emp.name,
+        department: emp.department || null,
+        designation: emp.designation || null,
+        status: "Active",
+      });
+    }
+  }
+
+  if (access.mailvault) {
+    const existing = await db.select().from(mailvaultTable).where(eq(mailvaultTable.employeeId, code));
+    if (!existing.length) {
+      await db.insert(mailvaultTable).values({
+        employeeId: code,
+        username: emp.name,
+      });
+    }
+  }
+
+  if (access.acronis) {
+    const existing = await db.select().from(acronisTable).where(eq(acronisTable.employeeId, code));
+    if (!existing.length) {
+      await db.insert(acronisTable).values({
+        employeeId: code,
+        employeeName: emp.name,
+        department: emp.department || null,
+        designation: emp.designation || null,
+        email: emp.email || null,
+      });
+    }
+  }
+
+  if (access.tataTele) {
+    const existing = await db.select().from(tataTeleTable).where(eq(tataTeleTable.employeeId, code));
+    if (!existing.length) {
+      await db.insert(tataTeleTable).values({
+        employeeId: code,
+        employeeName: emp.name,
+        department: emp.department || null,
+        designation: emp.designation || null,
+      });
+    }
+  }
+}
 
 function formatEmployee(emp: any) {
   return {
