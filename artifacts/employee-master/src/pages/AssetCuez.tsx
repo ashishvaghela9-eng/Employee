@@ -48,12 +48,12 @@ export default function AssetCuez() {
   };
 
   return (
-    <AppLayout title="AssetCuez">
+    <AppLayout title="Assetcues">
       <div className="bg-card rounded-2xl shadow-sm border border-border/50 p-6">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center text-muted-foreground">
             <MonitorSmartphone className="w-5 h-5 mr-2 text-primary" />
-            <span>Manage AssetCuez assignments</span>
+            <span>Manage Assetcues assignments</span>
           </div>
           <Button onClick={() => handleOpenForm()}>
             <Plus className="w-4 h-4 mr-2" /> Add Record

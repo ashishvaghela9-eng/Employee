@@ -3,9 +3,10 @@ import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth";
 import { 
-  LayoutDashboard, Users, FolderTree, MonitorSmartphone, Shield, 
+  LayoutDashboard, Users, MonitorSmartphone, Shield, 
   Trello, Mail, HardDrive, Database, PhoneCall, FileBarChart, 
-  Settings, LogOut, Menu, X, ChevronRight, UserCircle
+  Settings, LogOut, Menu, X, ChevronRight, UserCircle,
+  FolderTree, Server, ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -14,26 +15,32 @@ interface AppLayoutProps {
   title: string;
 }
 
-const navItems = [
+const mainNavItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/employees", label: "Employee Master", icon: Users },
+  { href: "/reports", label: "Reports", icon: FileBarChart },
+  { href: "/system-users", label: "System Users", icon: UserCircle },
+  { href: "/settings", label: "Settings", icon: Settings },
+];
+
+const serviceNavItems = [
   { href: "/branch-file-station", label: "Branch File Station", icon: FolderTree },
-  { href: "/assetcuez", label: "AssetCuez", icon: MonitorSmartphone },
+  { href: "/assetcuez", label: "Assetcues", icon: MonitorSmartphone },
   { href: "/vpn", label: "VPN", icon: Shield },
   { href: "/jira", label: "Jira", icon: Trello },
   { href: "/mailvault", label: "MailVault", icon: Mail },
   { href: "/ftp", label: "FTP", icon: HardDrive },
   { href: "/acronis", label: "Acronis Backup", icon: Database },
   { href: "/tata-tele", label: "Tata Tele", icon: PhoneCall },
-  { href: "/reports", label: "Reports", icon: FileBarChart },
-  { href: "/system-users", label: "System Users", icon: UserCircle },
-  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function AppLayout({ children, title }: AppLayoutProps) {
   const [location] = useLocation();
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  const isServiceActive = serviceNavItems.some(item => location === item.href);
+  const [servicesOpen, setServicesOpen] = useState(isServiceActive);
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row overflow-hidden">
@@ -70,10 +77,11 @@ export function AppLayout({ children, title }: AppLayoutProps) {
         </div>
 
         <div className="p-4 flex-1 overflow-y-auto w-[280px] h-[calc(100vh-64px)] pb-24 scrollbar-thin">
-          <div className="mb-6 px-2">
+          {/* Main Nav */}
+          <div className="mb-4 px-2">
             <p className="text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider mb-3">Management</p>
             <nav className="space-y-1">
-              {navItems.map((item) => {
+              {mainNavItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location === item.href || (location === "/" && item.href === "/dashboard");
                 return (
@@ -92,6 +100,58 @@ export function AppLayout({ children, title }: AppLayoutProps) {
                 );
               })}
             </nav>
+          </div>
+
+          {/* Services Group */}
+          <div className="px-2">
+            <p className="text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider mb-3">Services</p>
+            <div>
+              <button
+                onClick={() => setServicesOpen(!servicesOpen)}
+                className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 group cursor-pointer
+                  ${isServiceActive
+                    ? 'bg-primary/15 text-primary font-medium'
+                    : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'}
+                `}
+              >
+                <Server className={`w-5 h-5 mr-3 transition-colors ${isServiceActive ? 'text-primary' : 'group-hover:text-white'}`} />
+                <span>Services</span>
+                <ChevronDown className={`w-4 h-4 ml-auto transition-transform duration-200 ${servicesOpen ? 'rotate-180' : ''} ${isServiceActive ? 'text-primary' : ''}`} />
+              </button>
+
+              <AnimatePresence initial={false}>
+                {servicesOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <nav className="space-y-1 mt-1 ml-3 pl-3 border-l border-sidebar-border/50">
+                      {serviceNavItems.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = location === item.href;
+                        return (
+                          <Link key={item.href} href={item.href} className="block">
+                            <div className={`
+                              flex items-center px-3 py-2 rounded-xl transition-all duration-200 group cursor-pointer
+                              ${isActive 
+                                ? 'bg-primary/15 text-primary font-medium' 
+                                : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'}
+                            `}>
+                              <Icon className={`w-4 h-4 mr-3 transition-colors ${isActive ? 'text-primary' : 'group-hover:text-white'}`} />
+                              <span className="text-sm">{item.label}</span>
+                              {isActive && <ChevronRight className="w-3 h-3 ml-auto text-primary" />}
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </nav>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
 
@@ -130,7 +190,6 @@ export function AppLayout({ children, title }: AppLayoutProps) {
           </div>
           
           <div className="flex items-center space-x-4">
-            {/* Add header actions here if needed */}
           </div>
         </header>
 
