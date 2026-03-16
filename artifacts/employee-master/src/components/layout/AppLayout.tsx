@@ -9,6 +9,7 @@ import {
   FolderTree, Server, ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import lightLogo from "@assets/logo_1773643382976.jpg";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -66,11 +67,8 @@ export function AppLayout({ children, title }: AppLayoutProps) {
         }}
         className={`fixed md:relative z-50 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex-shrink-0 shadow-2xl md:shadow-none overflow-hidden`}
       >
-        <div className="h-16 flex items-center px-6 border-b border-sidebar-border w-[280px]">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center mr-3 shadow-lg">
-            <Shield className="w-4 h-4 text-white" />
-          </div>
-          <h1 className="font-display font-bold text-lg tracking-wide text-white">Light Finance</h1>
+        <div className="h-16 flex items-center px-4 border-b border-sidebar-border w-[280px]">
+          <img src={lightLogo} alt="Light Finance" className="h-10 w-auto object-contain" />
           <button className="ml-auto md:hidden text-sidebar-foreground/50 hover:text-white" onClick={() => setSidebarOpen(false)}>
             <X className="w-5 h-5" />
           </button>
