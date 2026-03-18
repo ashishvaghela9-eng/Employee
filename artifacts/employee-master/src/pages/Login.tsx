@@ -44,7 +44,7 @@ export default function Login() {
       <div className="hidden lg:flex flex-1 relative bg-sidebar overflow-hidden">
         {/* Abstract background image */}
         <img 
-          src={`${import.meta.env.BASE_URL}images/login-bg.png`} 
+          src={`${import.meta.env.BASE_URL}images/login-bg.jpg`} 
           alt="Login Background" 
           className="absolute inset-0 w-full h-full object-cover opacity-60"
         />
